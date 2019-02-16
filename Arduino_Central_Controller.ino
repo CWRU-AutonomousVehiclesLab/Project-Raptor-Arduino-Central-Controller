@@ -1,6 +1,8 @@
 #include <EnableInterrupt.h>
+//! Message Length Definition:
+#define MESSAGE_LENGTH 4
+#define SERIAL_PORT_SPEED 115200  // Serial Speed DO NOT CHANGE!
 
-#define SERIAL_PORT_SPEED 9600  // Serial Speed DO NOT CHANGE!
 //! Pin Setup: modify by need:
 #define RC_CH1_INPUT A8
 #define RC_CH2_INPUT A9
@@ -9,7 +11,7 @@
 #define SWITHC_RIGHT 44
 #define LED_BLUE_AUTONOMOUS 22
 #define LED_GREEN_RC 23
-
+#define LED_RED_ESTOP 24
 //! RC CONFIGURATION
 #define RC_TOTAL_CHANNELS 3  // TOTAL CHANNELS of RECIEVER, USE 3 for 3pk
 #define RC_CH1 0             // DO NOT CHANGE!
@@ -23,6 +25,10 @@
 uint16_t rc_values[RC_TOTAL_CHANNELS];
 uint32_t rc_start[RC_TOTAL_CHANNELS];
 volatile uint16_t rc_shared[RC_TOTAL_CHANNELS];
+uint8_t messageOut[MESSAGE_LENGTH];  // [state, steering, throttle]
+int ledState = LOW;
+unsigned long previousMillis = 0;
+unsigned long interval = 100;
 
 //! State Machine:
 int current_state = 0;
@@ -125,10 +131,56 @@ void print_recieved() {
     Serial.println(pulse2percentage(THROTTLE));
 }
 
+//! Used for blinking LED properly:
+void blinker(unsigned long currentMillis) {
+    if (currentMillis - previousMillis > interval) {
+        Serial.println(currentMillis - previousMillis);
+        previousMillis = currentMillis;
+        if (ledState == LOW)
+            ledState = HIGH;
+        else
+            ledState = LOW;
+    }
+}
+
+//! Serial Message Composer:
+void compose_message() {
+    messageOut[0] = current_state;
+    if (current_state == EMERGENCY_STOP || current_state == IDLE) {
+        messageOut[1] = 0;
+        messageOut[2] = 0;
+    } else if (current_state == RC_MODE) {
+        int temp_steering = pulse2percentage(STEERING);
+        int temp_throttle = pulse2percentage(THROTTLE);
+        if (temp_steering < 0) {
+            temp_steering = -1 * temp_steering + 100;
+        }
+        if (temp_throttle < 0) {
+            temp_throttle = -1 * temp_throttle + 100;
+        }
+
+        messageOut[1] = (uint8_t)temp_steering;
+        messageOut[2] = (uint8_t)temp_throttle;
+    } else if (current_state == AUTONOMOUS_MODE_EN) {
+        messageOut[1] = 0;
+        messageOut[2] = 0;
+    } else {
+        Serial.println("Something Fucked up for message composition....");
+        messageOut[1] = 0;
+        messageOut[2] = 0;
+    }
+}
+
+void send_message() {
+    Serial2.write(messageOut, MESSAGE_LENGTH);
+    Serial3.write(messageOut, MESSAGE_LENGTH);
+}
+
 //! MAIN SETUP
 void setup() {
     Serial.begin(SERIAL_PORT_SPEED);
-
+    Serial2.begin(SERIAL_PORT_SPEED);
+    Serial3.begin(SERIAL_PORT_SPEED);
     //* RC Reciever Configuration
     pinMode(RC_CH1_INPUT, INPUT_PULLUP);
     pinMode(RC_CH2_INPUT, INPUT_PULLUP);
@@ -140,18 +192,25 @@ void setup() {
     //* Switch Configuration
     pinMode(SWITCH_LEFT, INPUT_PULLUP);
     pinMode(SWITHC_RIGHT, INPUT_PULLUP);
-    pinMode(LED_BLUE_AUTONOMOUS,OUTPUT);
-    pinMode(LED_GREEN_RC,OUTPUT);
-
+    pinMode(LED_BLUE_AUTONOMOUS, OUTPUT);
+    pinMode(LED_GREEN_RC, OUTPUT);
+    pinMode(LED_RED_ESTOP, OUTPUT);
 }
 
 //! MAIN LOOP
 void loop() {
+    unsigned long currentMillis = millis();
     rc_read_values();
     state_check();
     switch (current_state) {
         case EMERGENCY_STOP:
+            compose_message();
+            send_message();
+            digitalWrite(LED_GREEN_RC, LOW);
+            digitalWrite(LED_BLUE_AUTONOMOUS, LOW);
+            digitalWrite(LED_RED_ESTOP, ledState);
             Serial.print("EMERGENCY STOP! EMERGENCY STOP! EMERGENCY STOP! \t");
+            blinker(currentMillis);
             if (ESTOP_INITATOR == 1) {
                 Serial.println("Physical Button!");
             } else if (ESTOP_INITATOR == 2) {
@@ -160,21 +219,36 @@ void loop() {
                 Serial.println("System Fucked UP!!!");  // Should never get
                                                         // here, but whatever!
             }
-
             break;
 
         case IDLE:
+            compose_message();
+            send_message();
             Serial.println("NO MODE SET!!! ROBOT IDLE!!!");
-
+            blinker(currentMillis);
+            digitalWrite(LED_GREEN_RC, ledState);
+            digitalWrite(LED_BLUE_AUTONOMOUS, ledState);
+            digitalWrite(LED_RED_ESTOP, ledState);
             break;
 
         case RC_MODE:
+            compose_message();
+            send_message();
             Serial.println("Remote Control Mode!!!");
-            digitalWrite(LED_GREEN_RC,HIGH);
+            digitalWrite(LED_BLUE_AUTONOMOUS, LOW);
+            digitalWrite(LED_RED_ESTOP, LOW);
+            digitalWrite(LED_GREEN_RC, HIGH);
             print_recieved();
 
             break;
-
+        case AUTONOMOUS_MODE_EN:
+            compose_message();
+            send_message();
+            Serial.println("AUTONOMOUS Mode Enabled!!!");
+            digitalWrite(LED_GREEN_RC, LOW);
+            digitalWrite(LED_RED_ESTOP, LOW);
+            digitalWrite(LED_BLUE_AUTONOMOUS, HIGH);
+            break;
         default:
             break;
     }
