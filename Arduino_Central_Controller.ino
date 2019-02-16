@@ -1,12 +1,14 @@
 #include <EnableInterrupt.h>
 
-#define SERIAL_PORT_SPEED 115200  // Serial Speed DO NOT CHANGE!
+#define SERIAL_PORT_SPEED 9600  // Serial Speed DO NOT CHANGE!
 //! Pin Setup: modify by need:
-#define RC_CH1_INPUT 52
-#define RC_CH2_INPUT 50
-#define RC_CH3_INPUT 48
+#define RC_CH1_INPUT A8
+#define RC_CH2_INPUT A9
+#define RC_CH3_INPUT A10
 #define SWITCH_LEFT 46
 #define SWITHC_RIGHT 44
+#define LED_BLUE_AUTONOMOUS 22
+#define LED_GREEN_RC 23
 
 //! RC CONFIGURATION
 #define RC_TOTAL_CHANNELS 3  // TOTAL CHANNELS of RECIEVER, USE 3 for 3pk
@@ -24,10 +26,10 @@ volatile uint16_t rc_shared[RC_TOTAL_CHANNELS];
 
 //! State Machine:
 int current_state = 0;
-#define EMERGENCY_STOP 0;
-#define IDLE 1;
-#define RC_MODE 2;
-#define AUTONOMOUS_MODE_EN 3;
+#define EMERGENCY_STOP 0
+#define IDLE 1
+#define RC_MODE 2
+#define AUTONOMOUS_MODE_EN 3
 
 //! ESTOP Seperator:
 int ESTOP_INITATOR = -1;  // 1 for physical estop, 2 for wireless estop
@@ -61,22 +63,36 @@ void calc_ch3() { calc_input(RC_CH3, RC_CH3_INPUT); }
 int pulse2percentage(int inputVal) {
     //* map is used for easier converting 1ms~2ms for remote to 700us~2300us for
     // servo map(value, fromLow, fromHigh, toLow, toHigh)
-    int val = map(rc_values[inputVal], 1000, 2000, -100, 100);
-    return val;
+    int temp = rc_values[inputVal];
+    if (temp <= 950) {
+        return 0;
+    } else if (temp >= 2050) {
+        return 0;
+    } else {
+        int val = map(temp, 1000, 2000, -100, 100);
+        return val;
+    }
 }
 
+//! Used for controlling the state!
 void state_check() {
-    if (true) {
+    if (1 < 0) {
         // RESERVE for Physical Emergency STOP Signal!
         current_state = EMERGENCY_STOP;
         ESTOP_INITATOR = 1;
     } else {
-        if (rc_values[STEERING] == 0 || rc_values[THROTTLE] == 0) {
+        if (rc_values[RE_STOP] > 1500 || rc_values[RE_STOP] < 900) {
             current_state = EMERGENCY_STOP;
             ESTOP_INITATOR = 2;
         } else {
-            if (digitalRead(SWITCH_LEFT) == LOW &&
-                digitalRead(SWITHC_RIGHT) == LOW) {
+            // Serial.print("SWITCH_LEFT: ");
+            // Serial.print(digitalRead(SWITCH_LEFT));
+            // Serial.print("\t");
+            // Serial.print("SWITHC_RIGHT: ");
+            // Serial.print(digitalRead(SWITHC_RIGHT));
+            // Serial.println("\t");
+            if (digitalRead(SWITCH_LEFT) == HIGH &&
+                digitalRead(SWITHC_RIGHT) == HIGH) {
                 current_state = IDLE;
             } else if (digitalRead(SWITCH_LEFT) == LOW &&
                        digitalRead(SWITHC_RIGHT) == HIGH) {
@@ -88,6 +104,25 @@ void state_check() {
             }
         }
     }
+}
+
+//! Used for Printing out the Serial Readout:
+void print_recieved() {
+    Serial.print("STEERING:");
+    Serial.print(rc_values[STEERING]);
+    Serial.print("\t");
+    Serial.print("THROTTLE:");
+    Serial.print(rc_values[THROTTLE]);
+    Serial.print("\t");
+    Serial.print("RE_STOP:");
+    Serial.print(rc_values[RE_STOP]);
+    Serial.print("\t");
+    Serial.print("STEERING output:");
+    Serial.print(pulse2percentage(STEERING));
+    Serial.print("\t");
+    Serial.print("THROTTLE output: ");
+    Serial.print("\t");
+    Serial.println(pulse2percentage(THROTTLE));
 }
 
 //! MAIN SETUP
@@ -105,16 +140,28 @@ void setup() {
     //* Switch Configuration
     pinMode(SWITCH_LEFT, INPUT_PULLUP);
     pinMode(SWITHC_RIGHT, INPUT_PULLUP);
+    pinMode(LED_BLUE_AUTONOMOUS,OUTPUT);
+    pinMode(LED_GREEN_RC,OUTPUT);
+
 }
 
 //! MAIN LOOP
 void loop() {
     rc_read_values();
-
+    state_check();
     switch (current_state) {
         case EMERGENCY_STOP:
-            Serial.println(
-                "EMERGENCY STOP! EMERGENCY STOP! EMERGENCY STOP!") break;
+            Serial.print("EMERGENCY STOP! EMERGENCY STOP! EMERGENCY STOP! \t");
+            if (ESTOP_INITATOR == 1) {
+                Serial.println("Physical Button!");
+            } else if (ESTOP_INITATOR == 2) {
+                Serial.println("Remote!");
+            } else {
+                Serial.println("System Fucked UP!!!");  // Should never get
+                                                        // here, but whatever!
+            }
+
+            break;
 
         case IDLE:
             Serial.println("NO MODE SET!!! ROBOT IDLE!!!");
@@ -122,22 +169,9 @@ void loop() {
             break;
 
         case RC_MODE:
-            SERIAL.println("Remote Control Mode!!!");
-            rc_read_values();
-            Serial.print("STEERING:");
-            Serial.print(rc_values[STEERING]);
-            Serial.print("\t");
-            Serial.print("THROTTLE:");
-            Serial.print(rc_values[THROTTLE]);
-            Serial.print("\t");
-            Serial.print("RE_STOP:");
-            Serial.print(rc_values[RE_STOP]);
-            Serial.print("\t");
-            Serial.print("STEERING output:");
-            Serial.println(pulse2percentage(STEERING));
-            Serial.println("THROTTLE output: ");
-            Serial.print("\t");
-            Serial.println(pulse2percentage(THROTTLE));
+            Serial.println("Remote Control Mode!!!");
+            digitalWrite(LED_GREEN_RC,HIGH);
+            print_recieved();
 
             break;
 
