@@ -134,7 +134,7 @@ void print_recieved() {
 //! Used for blinking LED properly:
 void blinker(unsigned long currentMillis) {
     if (currentMillis - previousMillis > interval) {
-        Serial.println(currentMillis - previousMillis);
+        // Serial.println(currentMillis - previousMillis);
         previousMillis = currentMillis;
         if (ledState == LOW)
             ledState = HIGH;
@@ -172,8 +172,11 @@ void compose_message() {
 }
 
 void send_message() {
+    Serial.println("Sending Message....");
     Serial2.write(messageOut, MESSAGE_LENGTH);
+    delay(1);
     Serial3.write(messageOut, MESSAGE_LENGTH);
+    delay(1);
 }
 
 //! MAIN SETUP
