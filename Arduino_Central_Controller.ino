@@ -173,9 +173,9 @@ void compose_message() {
 
 void send_message() {
     Serial.println("Sending Message....");
-    Serial2.write(messageOut, MESSAGE_LENGTH);
+    Serial1.write(messageOut, MESSAGE_LENGTH);
     delay(1);
-    Serial3.write(messageOut, MESSAGE_LENGTH);
+    Serial2.write(messageOut, MESSAGE_LENGTH);
     delay(1);
 }
 
@@ -242,8 +242,8 @@ void loop() {
             digitalWrite(LED_RED_ESTOP, LOW);
             digitalWrite(LED_GREEN_RC, HIGH);
             print_recieved();
-
             break;
+
         case AUTONOMOUS_MODE_EN:
             compose_message();
             send_message();
