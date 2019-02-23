@@ -146,9 +146,10 @@ void blinker(unsigned long currentMillis) {
 //! Serial Message Composer:
 void compose_message() {
     messageOut[0] = current_state;
+    messageOut[3] = (uint8_t)0;
     if (current_state == EMERGENCY_STOP || current_state == IDLE) {
-        messageOut[1] = 0;
-        messageOut[2] = 0;
+        messageOut[1] = (uint8_t)0;
+        messageOut[2] = (uint8_t)0;
     } else if (current_state == RC_MODE) {
         int temp_steering = pulse2percentage(STEERING);
         int temp_throttle = pulse2percentage(THROTTLE);
@@ -162,12 +163,12 @@ void compose_message() {
         messageOut[1] = (uint8_t)temp_steering;
         messageOut[2] = (uint8_t)temp_throttle;
     } else if (current_state == AUTONOMOUS_MODE_EN) {
-        messageOut[1] = 0;
-        messageOut[2] = 0;
+        messageOut[1] = (uint8_t)0;
+        messageOut[2] = (uint8_t)0;
     } else {
         Serial.println("Something Fucked up for message composition....");
-        messageOut[1] = 0;
-        messageOut[2] = 0;
+        messageOut[1] = (uint8_t)0;
+        messageOut[2] = (uint8_t)0;
     }
 }
 
@@ -183,7 +184,7 @@ void send_message() {
 void setup() {
     Serial.begin(SERIAL_PORT_SPEED);
     Serial2.begin(SERIAL_PORT_SPEED);
-    Serial3.begin(SERIAL_PORT_SPEED);
+    Serial1.begin(SERIAL_PORT_SPEED);
     //* RC Reciever Configuration
     pinMode(RC_CH1_INPUT, INPUT_PULLUP);
     pinMode(RC_CH2_INPUT, INPUT_PULLUP);
