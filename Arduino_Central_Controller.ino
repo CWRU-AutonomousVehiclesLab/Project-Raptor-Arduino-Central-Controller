@@ -174,6 +174,8 @@ void compose_message() {
 
 void send_message() {
     Serial.println("Sending Message....");
+    Serial1.flush();
+    Serial2.flush();
     Serial1.write(messageOut, MESSAGE_LENGTH);
     delay(1);
     Serial2.write(messageOut, MESSAGE_LENGTH);
