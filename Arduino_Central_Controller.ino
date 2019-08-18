@@ -9,9 +9,14 @@
 #define RC_CH3_INPUT A10
 #define SWITCH_LEFT 46
 #define SWITHC_RIGHT 44
-#define LED_BLUE_AUTONOMOUS 22
-#define LED_GREEN_RC 23
-#define LED_RED_ESTOP 24
+#define LED_RED 25
+#define LED_GREEN 27
+#define LED_BLUE 23
+#define redPin LED_RED
+#define greenPin LED_GREEN
+#define bluePin LED_BLUE
+
+
 //! RC CONFIGURATION
 #define RC_TOTAL_CHANNELS 3  // TOTAL CHANNELS of RECIEVER, USE 3 for 3pk
 #define RC_CH1 0             // DO NOT CHANGE!
@@ -131,18 +136,6 @@ void print_recieved() {
     Serial.println(pulse2percentage(THROTTLE));
 }
 
-//! Used for blinking LED properly:
-void blinker(unsigned long currentMillis) {
-    if (currentMillis - previousMillis > interval) {
-        // Serial.println(currentMillis - previousMillis);
-        previousMillis = currentMillis;
-        if (ledState == LOW)
-            ledState = HIGH;
-        else
-            ledState = LOW;
-    }
-}
-
 //! Serial Message Composer:
 void compose_message() {
     messageOut[0] = current_state;
@@ -182,6 +175,38 @@ void send_message() {
     delay(1);
 }
 
+void set_led(int current_state){
+    switch (current_state)
+    {
+        case EMERGENCY_STOP:
+            digitalWrite(redPin,HIGH);
+            digitalWrite(greenPin,LOW);
+            digitalWrite(bluePin,LOW);
+            break;
+
+        case IDLE:
+            digitalWrite(redPin,HIGH);
+            digitalWrite(greenPin,HIGH);
+            digitalWrite(bluePin,HIGH);
+            break;
+
+        case RC_MODE:
+            digitalWrite(redPin,LOW);
+            digitalWrite(greenPin,HIGH);
+            digitalWrite(bluePin,LOW);
+            break;
+
+        case AUTONOMOUS_MODE_EN:
+            digitalWrite(redPin,LOW);
+            digitalWrite(greenPin,LOW);
+            digitalWrite(bluePin,HIGH);            
+            break;
+    
+        default:
+            break;
+    }
+}
+
 //! MAIN SETUP
 void setup() {
     Serial.begin(SERIAL_PORT_SPEED);
@@ -198,9 +223,11 @@ void setup() {
     //* Switch Configuration
     pinMode(SWITCH_LEFT, INPUT_PULLUP);
     pinMode(SWITHC_RIGHT, INPUT_PULLUP);
-    pinMode(LED_BLUE_AUTONOMOUS, OUTPUT);
-    pinMode(LED_GREEN_RC, OUTPUT);
-    pinMode(LED_RED_ESTOP, OUTPUT);
+
+    //* LED CONFIGURATION
+    pinMode(redPin, OUTPUT);
+    pinMode(greenPin, OUTPUT);
+    pinMode(bluePin, OUTPUT);  
 }
 
 //! MAIN LOOP
@@ -212,11 +239,8 @@ void loop() {
         case EMERGENCY_STOP:
             compose_message();
             send_message();
-            digitalWrite(LED_GREEN_RC, LOW);
-            digitalWrite(LED_BLUE_AUTONOMOUS, LOW);
-            digitalWrite(LED_RED_ESTOP, ledState);
+            set_led(current_state);
             Serial.print("EMERGENCY STOP! EMERGENCY STOP! EMERGENCY STOP! \t");
-            blinker(currentMillis);
             if (ESTOP_INITATOR == 1) {
                 Serial.println("Physical Button!");
             } else if (ESTOP_INITATOR == 2) {
@@ -230,30 +254,23 @@ void loop() {
         case IDLE:
             compose_message();
             send_message();
+            set_led(current_state);
             Serial.println("NO MODE SET!!! ROBOT IDLE!!!");
-            blinker(currentMillis);
-            digitalWrite(LED_GREEN_RC, ledState);
-            digitalWrite(LED_BLUE_AUTONOMOUS, ledState);
-            digitalWrite(LED_RED_ESTOP, ledState);
             break;
 
         case RC_MODE:
             compose_message();
             send_message();
+            set_led(current_state);
             Serial.println("Remote Control Mode!!!");
-            digitalWrite(LED_BLUE_AUTONOMOUS, LOW);
-            digitalWrite(LED_RED_ESTOP, LOW);
-            digitalWrite(LED_GREEN_RC, HIGH);
             print_recieved();
             break;
 
         case AUTONOMOUS_MODE_EN:
             compose_message();
             send_message();
+            set_led(current_state);
             Serial.println("AUTONOMOUS Mode Enabled!!!");
-            digitalWrite(LED_GREEN_RC, LOW);
-            digitalWrite(LED_RED_ESTOP, LOW);
-            digitalWrite(LED_BLUE_AUTONOMOUS, HIGH);
             break;
         default:
             break;
