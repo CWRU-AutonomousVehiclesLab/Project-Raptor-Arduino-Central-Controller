@@ -1,2 +1,5 @@
 # Robot-Arduino-Remote-Interpreter
-This repository is used for storing code for Arduino interpreting remote control and remote E-STOP.
+
+This is the central arduino command node that interpretes RC signal and ROS signal.
+
+TODO: Add ROS Interface!
