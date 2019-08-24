@@ -15,7 +15,7 @@
 #define redPin LED_RED
 #define greenPin LED_GREEN
 #define bluePin LED_BLUE
-
+#define ESTOP_Relay 53
 
 //! RC CONFIGURATION
 #define RC_TOTAL_CHANNELS 3  // TOTAL CHANNELS of RECIEVER, USE 3 for 3pk
@@ -90,10 +90,12 @@ void state_check() {
     if (1 < 0) {
         // RESERVE for Physical Emergency STOP Signal!
         current_state = EMERGENCY_STOP;
+        digitalWrite(ESTOP_Relay,LOW);
         ESTOP_INITATOR = 1;
     } else {
         if (rc_values[RE_STOP] > 1500 || rc_values[RE_STOP] < 900) {
             current_state = EMERGENCY_STOP;
+            digitalWrite(ESTOP_Relay,LOW);
             ESTOP_INITATOR = 2;
         } else {
             // Serial.print("SWITCH_LEFT: ");
@@ -105,12 +107,15 @@ void state_check() {
             if (digitalRead(SWITCH_LEFT) == HIGH &&
                 digitalRead(SWITHC_RIGHT) == HIGH) {
                 current_state = IDLE;
+                digitalWrite(ESTOP_Relay,LOW);
             } else if (digitalRead(SWITCH_LEFT) == LOW &&
                        digitalRead(SWITHC_RIGHT) == HIGH) {
                 current_state = RC_MODE;
+                digitalWrite(ESTOP_Relay,HIGH);
             } else if (digitalRead(SWITCH_LEFT) == HIGH &&
                        digitalRead(SWITHC_RIGHT) == LOW) {
                 current_state = AUTONOMOUS_MODE_EN;
+                digitalWrite(ESTOP_Relay,LOW);
                 //?Preserved for future multiple autonomous mode enable.
             }
         }
@@ -228,6 +233,7 @@ void setup() {
     pinMode(redPin, OUTPUT);
     pinMode(greenPin, OUTPUT);
     pinMode(bluePin, OUTPUT);  
+    pinMode(ESTOP_Relay, OUTPUT);
 }
 
 //! MAIN LOOP
