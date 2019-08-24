@@ -34,6 +34,7 @@ uint8_t messageOut[MESSAGE_LENGTH];  // [state, steering, throttle]
 int ledState = LOW;
 unsigned long previousMillis = 0;
 unsigned long interval = 100;
+int disenage_estop_count = 0;
 
 //! State Machine:
 int current_state = 0;
@@ -89,13 +90,15 @@ int pulse2percentage(int inputVal) {
 void state_check() {
     if (1 < 0) {
         // RESERVE for Physical Emergency STOP Signal!
-        current_state = EMERGENCY_STOP;
         digitalWrite(ESTOP_Relay,LOW);
+        current_state = EMERGENCY_STOP;
+        disenage_estop_count = 0;
         ESTOP_INITATOR = 1;
     } else {
         if (rc_values[RE_STOP] > 1500 || rc_values[RE_STOP] < 900) {
-            current_state = EMERGENCY_STOP;
             digitalWrite(ESTOP_Relay,LOW);
+            current_state = EMERGENCY_STOP;
+            disenage_estop_count = 0;
             ESTOP_INITATOR = 2;
         } else {
             // Serial.print("SWITCH_LEFT: ");
@@ -110,8 +113,11 @@ void state_check() {
                 digitalWrite(ESTOP_Relay,LOW);
             } else if (digitalRead(SWITCH_LEFT) == LOW &&
                        digitalRead(SWITHC_RIGHT) == HIGH) {
-                current_state = RC_MODE;
-                digitalWrite(ESTOP_Relay,HIGH);
+                           disenage_estop_count++;
+                if (disenage_estop_count >= 20){
+                    current_state = RC_MODE;
+                    digitalWrite(ESTOP_Relay,HIGH);
+                }
             } else if (digitalRead(SWITCH_LEFT) == HIGH &&
                        digitalRead(SWITHC_RIGHT) == LOW) {
                 current_state = AUTONOMOUS_MODE_EN;
