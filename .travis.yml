@@ -21,7 +21,7 @@ install:
    - arduino --install-library "EnableInterrupt"
 
 script:
-  - build_platform mega
+  - build_platform Mega
 
 notifications:
   email:
