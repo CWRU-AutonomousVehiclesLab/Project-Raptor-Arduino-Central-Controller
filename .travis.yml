@@ -15,7 +15,7 @@ install:
    - arduino --install-library "EnableInterrupt"
 
 script:
-  - build_main_platforms
+  - build_platform mega2560
 
 notifications:
   email:
