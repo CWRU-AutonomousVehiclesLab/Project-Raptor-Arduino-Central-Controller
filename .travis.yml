@@ -1,0 +1,29 @@
+language: C
+cache:
+  directories:
+    - ~/arduino_ide
+    - ~/.arduino15/packages/
+git:
+  depth: false
+  quiet: true
+
+addons:
+  apt:
+    packages:
+      - python3
+      - python3-pip
+      - python3-setuptools
+
+before_install:
+  - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
+
+install:
+   - arduino --install-library "EnableInterrupt"
+
+script:
+  - build_platform mega
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
